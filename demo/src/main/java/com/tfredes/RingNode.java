@@ -1,3 +1,4 @@
+
 package com.tfredes;
 
 import java.net.*;
@@ -10,9 +11,7 @@ public class RingNode {
     private DatagramSocket socket;
     private boolean hasToken = false;
     private ScheduledExecutorService tokenMonitor;
-    private final ErrorSimulator errorSimulator = new ErrorSimulator();
     private long lastTokenTime = 0;
-    private ScheduledExecutorService scheduler;
 
     public RingNode(ConfigLoader config) throws SocketException {
         this.config = config;
@@ -53,7 +52,6 @@ public class RingNode {
         }
     }
 
-    // === NOVOS MÉTODOS ADICIONADOS ===
     public void addMessage(String destination, String content) {
         if(messageQueue.size() < MAX_QUEUE_SIZE) {
             messageQueue.offer(new Message(destination, content));
@@ -136,30 +134,21 @@ public class RingNode {
     }
 
     private void sendMessage() {
-    Message message = messageQueue.poll();
-    if(message != null) {
-        String crc = String.valueOf(CRC32Calculator.calculateCRC(message.content));
-        String packet = Packet.createDataPacket(
-            config.getNickname(),
-            message.destination,
-            "maquinanaoexiste", // Status inicial
-            crc,
-            message.content
-        );
-        
-        packet = ErrorSimulator.maybeCorrupt(packet); // Aplicar corrupção
-        forwardDataPacket(packet);
-    }
+        Message message = messageQueue.poll();
+        if(message != null) {
+            String crc = String.valueOf(CRC32Calculator.calculateCRC(message.content));
+            String packet = Packet.createDataPacket(
+                config.getNickname(),
+                message.destination,
+                "maquinanaoexiste", // Status inicial
+                crc,
+                message.content
+            );
+            
+            packet = ErrorSimulator.maybeCorrupt(packet); // Aplicar corrupção
+            forwardDataPacket(packet);
+        }
         forwardToken();
-    }
-
-    
-
-    private String corruptPacket(String packet) {
-        // Corrompe o CRC para simular erro
-        String[] parts = packet.split(";");
-        parts[4] = "00000000"; // CRC inválido
-        return String.join(";", parts);
     }
 
     private void forwardDataPacket(String packetData) {
@@ -181,15 +170,15 @@ public class RingNode {
         String destination = parts[2];
         String status = parts[3];
         String receivedCRC = parts[4];
-        String message = parts[5];
+        String messageContent = parts[5];
         
         // Se for destinado a esta máquina
         if(destination.equals(config.getNickname()) || destination.equals("TODOS")) {
-            long calculatedCRC = CRC32Calculator.calculateCRC(message);
+            long calculatedCRC = CRC32Calculator.calculateCRC(messageContent);
             
             if(Long.parseLong(receivedCRC) == calculatedCRC) {
                 status = "ACK";
-                System.out.println("[MSG] De " + source + ": " + message);
+                System.out.println("[MSG] De " + source + ": " + messageContent);
             } else {
                 status = "NAK";
                 System.out.println("[ERRO] CRC inválido de " + source);
@@ -198,17 +187,19 @@ public class RingNode {
         
         // Se voltou para a origem
         if(source.equals(config.getNickname())) {
-            handleReturnedPacket(status, message);
+            // CORREÇÃO: Passar o objeto Message completo
+            handleReturnedPacket(status, new Message(destination, messageContent));
         } else {
             // Repassa o pacote atualizado
             String newPacket = Packet.createDataPacket(
-                source, destination, status, receivedCRC, message
+                source, destination, status, receivedCRC, messageContent
             );
             forwardDataPacket(newPacket);
         }
     }
 
-    private void handleReturnedPacket(String status, String message) {
+    // CORREÇÃO: Receber objeto Message em vez de String
+    private void handleReturnedPacket(String status, Message message) {
         switch(status) {
             case "maquinanaoexiste":
                 System.out.println("[ERRO] Máquina destino não existe");
@@ -216,7 +207,7 @@ public class RingNode {
             case "NAK":
                 System.out.println("[RETRANSMISSÃO] Solicitada");
                 // Adiciona novamente na fila (1 retentativa)
-                messageQueue.offer(new Message(message.destination, message.content));
+                messageQueue.offer(message);
                 break;
             case "ACK":
                 System.out.println("[SUCESSO] Mensagem entregue");

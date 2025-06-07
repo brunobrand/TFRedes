@@ -9,10 +9,10 @@ public class Packet {
         String destination, 
         String status, 
         String crc, 
-        String message
+        String messageContent
     ) {
         return String.format("%s;%s;%s;%s;%s;%s",
-            DATA_HEADER, source, destination, status, crc, message);
+            DATA_HEADER, source, destination, status, crc, messageContent);
     }
 
     public static String[] parseDataPacket(String packet) {

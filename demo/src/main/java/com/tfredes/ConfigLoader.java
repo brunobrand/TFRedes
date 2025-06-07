@@ -1,7 +1,8 @@
 package com.tfredes;
-import java.io.bufferedReader;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 
 public class ConfigLoader {
     private String nextNodeIP;
@@ -10,15 +11,15 @@ public class ConfigLoader {
     private int tokenHoldTime;
     private boolean isTokenGenerator;
 
-    public ConfigLoader(String fileName) {
-        BufferedReader reader = new BufferedReader(new FileReader(fileName));
-        String[] ipPort = reader.readLine().split(":");
-        this.nextNodeIP = ipPort[0];
-        this.nextNodePort = Integer.parseInt(ipPort[1]);
-        this.nickname = reader.readLine();
-        this.tokenHoldTime = Integer.parseInt(reader.readLine());
-        this.isTokenGenerator = Boolean.parseBoolean(reader.readLine());
-        reader.close();
+    public ConfigLoader(String fileName) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String[] ipPort = reader.readLine().split(":");
+            this.nextNodeIP = ipPort[0];
+            this.nextNodePort = Integer.parseInt(ipPort[1]);
+            this.nickname = reader.readLine();
+            this.tokenHoldTime = Integer.parseInt(reader.readLine());
+            this.isTokenGenerator = Boolean.parseBoolean(reader.readLine());
+        }
     }
 
     public String getNextNodeIP() {
@@ -27,7 +28,7 @@ public class ConfigLoader {
 
     public int getNextNodePort() {
         return nextNodePort;
-    }	
+    }    
 
     public String getNickname() {
         return nickname;
