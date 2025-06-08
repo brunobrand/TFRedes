@@ -1,6 +1,7 @@
 
 package com.tfredes;
 
+import java.io.IOException;
 import java.net.*;
 import java.util.concurrent.*;
 
@@ -13,9 +14,13 @@ public class RingNode {
     private ScheduledExecutorService tokenMonitor;
     private long lastTokenTime = 0;
 
-    public RingNode(ConfigLoader config) throws SocketException {
+    public RingNode(ConfigLoader config) throws IOException {
         this.config = config;
-        this.socket = new DatagramSocket(config.getNextNodePort());
+        this.socket = new DatagramSocket(config.getListenPort());
+    }
+
+    private synchronized void log(String message) {
+        System.out.println(message);
     }
 
     public void printStatus() {
@@ -97,8 +102,7 @@ public class RingNode {
     private void handleToken() {
         hasToken = true;
         lastTokenTime = System.currentTimeMillis();
-        System.out.println("[TOKEN] Recebido em " + config.getNickname());
-        
+        log("[TOKEN] Recebido em " + config.getNickname());        
         // Simula tempo de espera configurado
         try {
             Thread.sleep(config.getTokenHoldTime() * 1000);
@@ -178,10 +182,10 @@ public class RingNode {
             
             if(Long.parseLong(receivedCRC) == calculatedCRC) {
                 status = "ACK";
-                System.out.println("[MSG] De " + source + ": " + messageContent);
+                log("[MSG] De " + source + ": " + messageContent);
             } else {
                 status = "NAK";
-                System.out.println("[ERRO] CRC inválido de " + source);
+                log("[ERRO] CRC inválido de " + source);
             }
         }
         
