@@ -1,7 +1,6 @@
 com\tfredes\Message.class
 com\tfredes\Packet.class
 com\tfredes\ErrorSimulator.class
-com\tfredes\RingNode.class
 com\tfredes\ConfigLoader.class
 com\tfredes\Main.class
 com\tfredes\CRC32Calculator.class
